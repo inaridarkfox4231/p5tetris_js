@@ -1,5 +1,10 @@
 // p5tetris.
 
+// 現時点で考えてる変更案
+// タイトルの曲をなくす
+// 選択する際の音を出せるようにする
+// そのくらい・・か。
+
 // クリアの際に一番最後に置いたブロックのゴーストが発生してしまうバグ発生(2021/01/28/23:57)
 // 次の状態がクリアの場合にカレントを描画しないようにすることで対処→解消（2021/01/29/0:11）
 // 下ボタン長押し中はスコアが5ずつアップするようにしたい（2021/01/29/0:16）
@@ -15,6 +20,8 @@
 
 // 消すときの音も付けたしとりあえず完成です
 // 次はブロック崩しとか作ってみたいです。おわり。
+
+// 音のON/OFFできるように修正（キー操作では無理なのでクリックしてください）
 
 let mySystem;
 
@@ -34,7 +41,7 @@ const K_SPACE = 32;
 let playMusic; // playの間流れ続ける音楽で、selectかclearかpauseから来たらonにする。で、pauseかclearかgameoverに抜けるときにオフにする。
 let clearMusic; // クリアしたら流れる。クラス内で止める。
 let gameoverMusic; // ゲームオーバーで流れる。流れたら止める。
-let titleMusic; // タイトル、セレクトで流れる。セレクトからどっか行ったら止める。
+// タイトル曲廃止
 let eraseMusic; // 消すときの音
 let myMusic;
 
@@ -44,7 +51,6 @@ function preload(){
 	playMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetris.mp3");
 	clearMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisClear.mp3");
 	gameoverMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisGameover.mp3");
-	titleMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisTitle.wav");
 	eraseMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisErase.wav");
 	huiFont = loadFont("https://inaridarkfox4231.github.io/assets/HuiFont29.ttf");
 }
@@ -53,7 +59,6 @@ function setup(){
 	createCanvas(340, 500);
 	mySystem = new System();
 	myMusic = new Music();
-  myMusic.loop("title");
 }
 
 function draw(){
@@ -64,21 +69,31 @@ function draw(){
 
 class Music{
 	constructor(){
-		this.soundFiles = {title:titleMusic, play:playMusic, clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic};
+		this.soundFiles = {play:playMusic, clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic};
+		this.soundFlag = true;
 	}
+	flagChange(){
+		this.soundFlag = !this.soundFlag;
+	}
+	getFlag(){ return this.soundFlag; }
 	loop(kind){
+		if(!this.soundFlag){ return; }
 		this.soundFiles[kind].loop();
 	}
 	play(kind){
+		if(!this.soundFlag){ return; }
 		this.soundFiles[kind].play();
 	}
 	stop(kind){
+		if(!this.soundFlag){ return; }
 		this.soundFiles[kind].stop();
 	}
 	reset(kind){
+		if(!this.soundFlag){ return; }
 		this.soundFiles[kind].jump(0, 0);
 	}
 	pause(kind){
+		if(!this.soundFlag){ return; }
 		this.soundFiles[kind].pause();
 	}
 }
@@ -129,6 +144,7 @@ class State{
     // たとえばselectからplayに行くときにmodeの情報を与えるとか
   }
   keyAction(code){}
+	touchAction(){} // タッチ用。スマホでもできるように。
 	update(){}
 	draw(){}
 }
@@ -152,15 +168,15 @@ class Title extends State{
 		this.gr.textSize(76);
 		this.gr.fill(0);
 		this.gr.textAlign(CENTER, CENTER);
-		this.gr.text("TETRIS", 170, 160);
+		this.gr.text("TETRIS", 170, 150);
 		this.gr.textSize(38);
-		this.gr.text("PRESS ENTER KEY", 170, 280);
+		this.gr.text("PRESS ENTER KEY", 170, 270);
+		this.gr.text("(OR TOUCH SCREEN)", 170, 320);
 	}
   prepare(_state){
     // ここでリセット
     // playに直接アクセスしてリセットする
     this.node.getState("play").reset();
-		if(_state.name !== "select"){ myMusic.loop("title"); }
   }
   keyAction(code){
     // エンターキー押したらセレクトへ
@@ -168,6 +184,10 @@ class Title extends State{
       this.setNextState("select");
     }
   }
+	touchAction(){
+		// タッチしたらセレクトへ
+		this.setNextState("select");
+	}
   update(){
     // エンターキー押したら次に行くだけ
     // やることは何も無さそう・・タイトルアニメーションとか？？（フラッピーでやったやつ）
@@ -224,12 +244,26 @@ class Select extends State{
           this.setNextState("title");
         }else{
           this.setNextState("play");
-					myMusic.reset("title");
-					myMusic.stop("title");
         }
         break;
     }
   }
+	touchAction(){
+		const x = mouseX;
+		const y = mouseY;
+		if(x > 50 && x < 180 && y > 50 && y < 80){ this.mode = 0; }
+		else if(x > 50 && x < 225 && y > 130 && y < 160){ this.mode = 1; }
+		else if(x > 50 && x < 245 && y > 180 && y < 210){ this.mode = 2; }
+		else if(x > 25 && x < 295 && y > 242 && y < 282){
+      if(this.mode === 0){
+        this.setNextState("title");
+      }else{
+        this.setNextState("play");
+      }
+		}else if(x > 220 && x < 334 && y > 45 && y < 85){
+			myMusic.flagChange();
+		}
+	}
   update(){
     // やることが、ない。
     // アニメーションでもするなら別だけど。
@@ -239,14 +273,27 @@ class Select extends State{
 		let col = [0, 0, 0];
 		let txt = ["TO TITLE", "STAGE CLEAR", "SCORE ATTACK"];
 		col[this.mode] += 255;
-		if(col[0] > 0){ this.gr.fill(0); this.gr.rect(50, 100, 130, 30); }
+		if(col[0] > 0){ this.gr.fill(0); this.gr.rect(50, 50, 130, 30); }
 		this.gr.fill(col[0]);
-		this.gr.text(txt[0], 52, 123);
+		this.gr.text(txt[0], 52, 73);
 		for(let k = 1; k < 3; k++){
-			if(col[k] > 0){ this.gr.fill(0); this.gr.rect(50, 130 + 50 * k, 155 + 20 * k, 30); }
+			if(col[k] > 0){ this.gr.fill(0); this.gr.rect(50, 80 + 50 * k, 155 + 20 * k, 30); }
 			this.gr.fill(col[k]);
-			this.gr.text(txt[k], 52, 153 + 50 * k);
+			this.gr.text(txt[k], 52, 103 + 50 * k);
 		}
+		this.gr.fill(0);
+		this.gr.text("(DETERMINE BUTTON)", 32, 270);
+		this.gr.text((myMusic.getFlag() ? "ON" : "OFF"), 282, 73);
+		this.gr.arc(224, 65, 50, 50, -PI / 7, PI / 7);
+		this.gr.noFill();
+		this.gr.stroke(0);
+		this.gr.strokeWeight(2);
+		this.gr.arc(231, 65, 50, 50, -PI / 7, PI / 7);
+		this.gr.arc(238, 65, 50, 50, -PI / 7, PI / 7);
+		this.gr.arc(245, 65, 50, 50, -PI / 7, PI / 7);
+		this.gr.rect(220, 45, 114, 40); // この範囲をタッチすると音声のON/OFFを決められる
+		this.gr.rect(25, 242, 280, 40); // この範囲をタッチすると決定とみなされる
+		this.gr.noStroke();
     image(this.gr, 0, 0);
   }
 }
@@ -336,11 +383,51 @@ class Play extends State{
     gr.fill(80);
     gr.rect(40, 20, 200, 400);
     gr.rect(280, 20, 40, 80);
+		// ここからテキスト関連
     gr.fill(0, 0, 100);
 		gr.textSize(29);
     gr.text("LEVEL:", 24, 462);
     gr.text("LINE:", 194, 462);
     gr.text("SCORE:", 24, 490);
+		// ここからコンフィグエリア
+		gr.fill(80);
+		gr.rect(260, 120, 80, 310);
+		gr.colorMode(RGB);
+		// 十字キーのボタン
+		gr.fill(121, 234, 156);
+		gr.rect(270, 130, 60, 40); // 上キー領域指定
+		gr.rect(260, 190, 40, 40); // 左キー領域指定
+		gr.rect(300, 190, 40, 40); // 右キー領域指定
+		gr.rect(270, 250, 60, 40); // 下キー領域指定
+		gr.fill(22, 120, 52);
+		gr.rect(275, 135, 55, 35);
+		gr.rect(265, 195, 35, 35);
+		gr.rect(305, 195, 35, 35);
+		gr.rect(275, 255, 55, 35);
+		gr.fill(34, 177, 76);
+		gr.rect(275, 135, 50, 30);
+		gr.rect(265, 195, 30, 30);
+		gr.rect(305, 195, 30, 30);
+		gr.rect(275, 255, 50, 30);
+		// 十字キーの矢印
+		const r = floor(20 / sqrt(3));
+    gr.fill(0);
+		gr.triangle(300, 140, 300 - r, 160, 300 + r, 160);
+		gr.triangle(270, 210, 290, 210 - r, 290, 210 + r);
+		gr.triangle(330, 210, 310, 210 - r, 310, 210 + r);
+		gr.triangle(300, 280, 300 - r, 260, 300 + r, 260);
+		// ポーズキーのボタン
+		gr.fill(255, 186, 140);
+		gr.rect(260, 300, 80, 60); // 領域指定
+		gr.fill(200, 80, 0);
+		gr.rect(265, 305, 75, 55);
+		gr.fill(255, 127, 39);
+		gr.rect(265, 305, 70, 50);
+		// エンターキー要らないので廃止
+		// ポーズキーの文字描画
+		gr.fill(0);
+		gr.textAlign(CENTER, CENTER);
+		gr.text("PAUSE", 300, 325);
 		return gr;
 	}
   prepare(_state){
@@ -393,7 +480,10 @@ class Play extends State{
       return;
     }
     this.frame += 1;
-		if(keyIsDown(K_DOWN)){ this.score += 5; this.frame += this.fallSpeed * 0.5; } // 下長押しでだーっと. その間は常にスコア+5ですね
+		if(keyIsDown(K_DOWN) || (mouseIsPressed && mouseX > 270 && mouseX < 330 && mouseY > 250 && mouseY < 290)){
+			// 下長押しでだーっと. その間は常にスコア+5ですね
+			this.score += 5; this.frame += this.fallSpeed * 0.5;
+		}
     if(this.frame > this.fallSpeed){
       this.frame = 0;
       this.check();
@@ -476,6 +566,7 @@ class Play extends State{
   }
   keyAction(code){
     // 上下左右キーでテトリミノを動かしスペースキーでポーズと行ったり来たりさせる。以上。
+		// 下ボタン使わへんやん（こっちには書かなくていい）
     switch(code){
       case K_RIGHT:
         this.slide(1);
@@ -489,14 +580,32 @@ class Play extends State{
           this.setBlock();
         }
         break;
-      case K_DOWN:
-        this.frame = this.fallSpeed; // プレイ中の下ボタン押しで常にスコア+5となるように修正したのでこっちには書かないこととする
-        break;
       case K_SPACE:
         this.setNextState("pause");
         break;
     }
   }
+	touchAction(){
+		// 十字キー上右左による操作とポーズ。エンターキーは使わないね、ポーズとゲームオーバーとクリアとオールクリアで使うんじゃないかと。
+		const x = mouseX;
+		const y = mouseY;
+		if(x > 300 && x < 340 && y > 190 && y < 230){
+			// 右キー
+			this.slide(1);
+		}else if(x > 260 && x < 300 && y > 190 && y < 230){
+			// 左キー
+			this.slide(-1);
+		}else if(x > 270 && x < 330 && y > 130 && y < 170){
+			// 上キー
+      if(this.rollable()){
+        this.phase = (this.phase + 1) % 4;
+        this.setBlock();
+      }
+		}else if(x > 260 && x < 340 && y > 300 && y < 360){
+			// ポーズキー
+      this.setNextState("pause");
+		}
+	}
   initialize(){
     // 初期化。モードにより若干処理内容が異なる
     // とはいえ今はステージクリアしかないけどね
@@ -803,7 +912,7 @@ class Pause extends State{
 		this.pauseText = this.createPauseText();
   }
 	createPauseText(){
-		let gr = createGraphics(200, 80);
+		let gr = createGraphics(200, 120);
 		gr.background(0);
 		gr.textFont(huiFont);
 		gr.textAlign(CENTER, CENTER);
@@ -811,18 +920,23 @@ class Pause extends State{
 		gr.fill(255);
 		gr.text("----PAUSE----", 100, 15);
 		gr.text("PRESS SPACE", 100, 55);
+		gr.text("(OR TOUCH)", 100, 95);
 		return gr;
 	}
   prepare(_state){
     // playからしか来ないよ
     this.gr.image(_state.gr, 0, 0);
     this.gr.background(0, 128);
-    this.gr.image(this.pauseText, 40, 200);
+    this.gr.image(this.pauseText, 40, 180);
 		myMusic.pause("play");
   }
   keyAction(code){
     if(code === K_SPACE){ this.setNextState("play"); }
   }
+	touchAction(){
+		// タッチされれば解除
+		this.setNextState("play");
+	}
   update(){
     // 処理なし
   }
@@ -841,7 +955,7 @@ class Gameover extends State{
 		this.gameoverText = this.createGameoverText();
   }
 	createGameoverText(){
-		let gr = createGraphics(200, 80);
+		let gr = createGraphics(200, 120);
 		gr.background(0);
 		gr.textFont(huiFont);
 		gr.textAlign(CENTER, CENTER);
@@ -849,6 +963,7 @@ class Gameover extends State{
 		gr.fill(255);
 		gr.text("GAME OVER...", 100, 15);
 		gr.text("PRESS RETURN", 100, 55);
+		gr.text("(OR TOUCH)", 100, 95);
 		return gr;
 	}
   prepare(_state){
@@ -864,6 +979,12 @@ class Gameover extends State{
       this.setNextState("title");
     }
   }
+	touchAction(){
+		// タッチされたら戻る
+		if(this.frame > 80){
+			this.setNextState("title");
+		}
+	}
   update(){
     this.frame++;
 		if(this.frame > 80){ myMusic.stop("gameover"); }
@@ -878,7 +999,7 @@ class Gameover extends State{
     }
 		pl.drawAllTile();
     this.gr.image(pl.gr, 0, 0);
-    if(this.frame > 40){ this.gr.image(this.gameoverText, 40, 200); }
+    if(this.frame > 40){ this.gr.image(this.gameoverText, 40, 180); }
     image(this.gr, 0, 0);
   }
 }
@@ -895,7 +1016,7 @@ class Clear extends State{
 		this.allClearText = this.createAllClearText();
   }
 	createClearText(){
-		let gr = createGraphics(200, 80);
+		let gr = createGraphics(200, 120);
 		gr.textFont(huiFont);
 		gr.background(0);
 		gr.textAlign(CENTER, CENTER);
@@ -903,10 +1024,11 @@ class Clear extends State{
 		gr.fill(255);
 		gr.text("CLEAR!!", 100, 15);
 		gr.text("PRESS RETURN", 100, 55);
+		gr.text("(OR TOUCH)", 100, 95);
 		return gr;
 	}
 	createAllClearText(){
-		let gr = createGraphics(200, 80);
+		let gr = createGraphics(200, 120);
 		gr.textFont(huiFont);
 		gr.background(0);
 		gr.textAlign(CENTER, CENTER);
@@ -914,6 +1036,7 @@ class Clear extends State{
 		gr.fill(255);
 		gr.text("ALL CLEAR!!!", 100, 15);
 		gr.text("PRESS RETURN", 100, 55);
+		gr.text("(OR TOUCH)", 100, 95);
 		return gr;
 	}
   prepare(_state){
@@ -923,9 +1046,9 @@ class Clear extends State{
     this.gr.image(_state.gr, 0, 0);
     this.level = _state.level;
     if(this.level < 4){
-      this.gr.image(this.clearText, 40, 200);
+      this.gr.image(this.clearText, 40, 180);
     }else{
-      this.gr.image(this.allClearText, 40, 200);
+      this.gr.image(this.allClearText, 40, 180);
     }
 		myMusic.reset("play");
 		myMusic.stop("play");
@@ -942,6 +1065,14 @@ class Clear extends State{
       this.setNextState("title");
     }
   }
+	touchAction(){
+		if(this.frame < 40){ return; }
+    if(this.level < 4){
+      this.setNextState("play");
+    }else{
+      this.setNextState("title");
+    }
+	}
   update(){
     this.frame++;
 		if(this.frame > 80){ myMusic.stop("clear"); }
@@ -953,5 +1084,10 @@ class Clear extends State{
 
 function keyPressed(){
   mySystem.currentState.keyAction(keyCode);
+	return false;
+}
+
+function touchStarted(){
+	mySystem.currentState.touchAction();
 	return false;
 }
