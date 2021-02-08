@@ -511,11 +511,11 @@ class Play extends State{
     // 配置済みのタイルを描画する
     this.drawAllTile();
     // 次に落ちてくるテトリミノをネクストボックスに描画する
-		this.drawCurrentBlock();
+		this.drawNextBlock();
 		// 落下先の想定場所にテトリミノのゴーストを表示する（下ボタン押したら到達するであろう場所）
-    this.drawNextBlock();
+    this.drawFallenBlock();
 		// 現在落下中のテトリミノを描画する（クリアするときは描画しない）
-		this.drawFallenBlock();
+		this.drawCurrentBlock();
     // レベルを描画する
     this.drawLevel();
     // スコアを描画する
