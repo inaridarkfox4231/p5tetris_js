@@ -22,6 +22,10 @@
 // 次はブロック崩しとか作ってみたいです。おわり。
 
 // 音のON/OFFできるように修正（キー操作では無理なのでクリックしてください）
+// 一部の音はOFFでも流れるように修正
+
+// 最後にブロックが落ちる場所のゴーストブロックを用意したい。
+// 灰色のやつを使って。
 
 let mySystem;
 
@@ -43,6 +47,8 @@ let clearMusic; // クリアしたら流れる。クラス内で止める。
 let gameoverMusic; // ゲームオーバーで流れる。流れたら止める。
 // タイトル曲廃止
 let eraseMusic; // 消すときの音
+let decisionMusic; // 決定音
+
 let myMusic;
 
 let huiFont;
@@ -52,6 +58,7 @@ function preload(){
 	clearMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisClear.mp3");
 	gameoverMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisGameover.mp3");
 	eraseMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisErase.wav");
+  decisionMusic = loadSound("https://inaridarkfox4231.github.io/assets/FlappyBird/decision.wav");
 	huiFont = loadFont("https://inaridarkfox4231.github.io/assets/HuiFont29.ttf");
 }
 
@@ -67,33 +74,38 @@ function draw(){
 	mySystem.shift();
 }
 
+// decisionとeraseはオフできないようにしたいわね
 class Music{
 	constructor(){
-		this.soundFiles = {play:playMusic, clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic};
+		this.soundFiles = {play:playMusic, clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic, decision:decisionMusic};
 		this.soundFlag = true;
 	}
 	flagChange(){
 		this.soundFlag = !this.soundFlag;
 	}
 	getFlag(){ return this.soundFlag; }
+	check(kind){
+		if(kind === "erase" || kind === "decision"){ return true; }
+		return this.soundFlag;
+	}
 	loop(kind){
-		if(!this.soundFlag){ return; }
+		if(!this.check(kind)){ return; }
 		this.soundFiles[kind].loop();
 	}
 	play(kind){
-		if(!this.soundFlag){ return; }
+		if(!this.check(kind)){ return; }
 		this.soundFiles[kind].play();
 	}
 	stop(kind){
-		if(!this.soundFlag){ return; }
+		if(!this.check(kind)){ return; }
 		this.soundFiles[kind].stop();
 	}
 	reset(kind){
-		if(!this.soundFlag){ return; }
+		if(!this.check(kind)){ return; }
 		this.soundFiles[kind].jump(0, 0);
 	}
 	pause(kind){
-		if(!this.soundFlag){ return; }
+		if(!this.check(kind)){ return; }
 		this.soundFiles[kind].pause();
 	}
 }
@@ -182,11 +194,13 @@ class Title extends State{
     // エンターキー押したらセレクトへ
     if(code === K_ENTER){
       this.setNextState("select");
+			myMusic.play("decision");
     }
   }
 	touchAction(){
 		// タッチしたらセレクトへ
 		this.setNextState("select");
+		myMusic.play("decision");
 	}
   update(){
     // エンターキー押したら次に行くだけ
@@ -247,6 +261,7 @@ class Select extends State{
         }
         break;
     }
+		myMusic.play("decision");
   }
 	touchAction(){
 		const x = mouseX;
@@ -260,6 +275,7 @@ class Select extends State{
       }else{
         this.setNextState("play");
       }
+			myMusic.play("decision");
 		}else if(x > 220 && x < 334 && y > 45 && y < 85){
 			myMusic.flagChange();
 		}
@@ -495,9 +511,11 @@ class Play extends State{
     // 配置済みのタイルを描画する
     this.drawAllTile();
     // 次に落ちてくるテトリミノをネクストボックスに描画する
+		this.drawCurrentBlock();
+		// 落下先の想定場所にテトリミノのゴーストを表示する（下ボタン押したら到達するであろう場所）
     this.drawNextBlock();
 		// 現在落下中のテトリミノを描画する（クリアするときは描画しない）
-		this.drawCurrentBlock();
+		this.drawFallenBlock();
     // レベルを描画する
     this.drawLevel();
     // スコアを描画する
@@ -529,6 +547,24 @@ class Play extends State{
         this.drawTile(20 * (this.tx[k] - 1) + 40, 20 * this.ty[k] - 60, this.type);
       }
     }
+	}
+	drawFallenBlock(){
+		// 下ボタン押し続けたら到達するであろう場所に4つ分タイルを描画
+		if(this.nextState !== undefined && this.nextState.name === "clear"){ return; }
+		let diff = 0;
+		const {tx, ty} = this;
+		while(diff < 24){
+			if(ty[0] + diff + 1 > 23 || ty[1] + diff + 1 > 23 || ty[2] + diff + 1 > 23 || ty[3] + diff + 1 > 23){ break; }
+			if(this.Matrix[ty[0] + diff + 1][tx[0]] > 0 || this.Matrix[ty[1] + diff + 1][tx[1]] > 0 ||
+				 this.Matrix[ty[2] + diff + 1][tx[2]] > 0 || this.Matrix[ty[3] + diff + 1][tx[3]] > 0){ break; }
+			diff++;
+		}
+		if(diff == 0){ return; }
+		for(let k = 0; k < 4; k++){
+			if(this.ty[k] + diff > 3){
+				this.drawTile(20 * (tx[k] - 1) + 40, 20 * (ty[k] + diff) - 60, 8);
+			}
+		}
 	}
   drawLevel(){
     let tmp = this.level;
