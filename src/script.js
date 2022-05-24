@@ -27,6 +27,9 @@
 // 最後にブロックが落ちる場所のゴーストブロックを用意したい。
 // 灰色のやつを使って。
 
+// 2022/05/24
+// playMusicうるさいので廃止
+
 let mySystem;
 
 // utility.
@@ -42,7 +45,7 @@ const K_DOWN = 40;
 const K_SPACE = 32;
 
 // 音源
-let playMusic; // playの間流れ続ける音楽で、selectかclearかpauseから来たらonにする。で、pauseかclearかgameoverに抜けるときにオフにする。
+//let playMusic; // playの間流れ続ける音楽で、selectかclearかpauseから来たらonにする。で、pauseかclearかgameoverに抜けるときにオフにする。
 let clearMusic; // クリアしたら流れる。クラス内で止める。
 let gameoverMusic; // ゲームオーバーで流れる。流れたら止める。
 // タイトル曲廃止
@@ -54,7 +57,7 @@ let myMusic;
 let huiFont;
 
 function preload(){
-	playMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetris.mp3");
+	//playMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetris.mp3");
 	clearMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisClear.mp3");
 	gameoverMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisGameover.mp3");
 	eraseMusic = loadSound("https://inaridarkfox4231.github.io/SoundSet/tetrisErase.wav");
@@ -77,7 +80,7 @@ function draw(){
 // decisionとeraseはオフできないようにしたいわね
 class Music{
 	constructor(){
-		this.soundFiles = {play:playMusic, clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic, decision:decisionMusic};
+		this.soundFiles = {clear:clearMusic, gameover:gameoverMusic, erase:eraseMusic, decision:decisionMusic};
 		this.soundFlag = true;
 	}
 	flagChange(){
@@ -453,11 +456,17 @@ class Play extends State{
 		// 違う。erasingから来る場合は、だめだ！！！initializeしてはいけない！！！pauseから来る場合も！
     switch(_state.name){
       case "select":
-        this.mode = _state.mode; this.initialize(); myMusic.reset("play"); myMusic.loop("play"); break;
+        this.mode = _state.mode; this.initialize();
+				//myMusic.reset("play");
+				//myMusic.loop("play");
+				break;
 			case "clear":
-				this.initialize(); myMusic.loop("play"); break;
+				this.initialize();
+				//myMusic.loop("play");
+				break;
 			case "pause":
-				myMusic.loop("play"); break;
+				//myMusic.loop("play");
+				break;
     }
 		// pause, erasingからくる場合は何もしない
   }
@@ -964,7 +973,7 @@ class Pause extends State{
     this.gr.image(_state.gr, 0, 0);
     this.gr.background(0, 128);
     this.gr.image(this.pauseText, 40, 180);
-		myMusic.pause("play");
+		//myMusic.pause("play");
   }
   keyAction(code){
     if(code === K_SPACE){ this.setNextState("play"); }
@@ -1005,8 +1014,8 @@ class Gameover extends State{
   prepare(_state){
     this.playState = _state; // 直接アクセスして灰色にしちゃう方がよさそう
     this.frame = 0;
-		myMusic.reset("play");
-		myMusic.stop("play");
+		//myMusic.reset("play");
+		//myMusic.stop("play");
 		myMusic.play("gameover");
   }
   keyAction(code){
@@ -1086,8 +1095,8 @@ class Clear extends State{
     }else{
       this.gr.image(this.allClearText, 40, 180);
     }
-		myMusic.reset("play");
-		myMusic.stop("play");
+		//myMusic.reset("play");
+		//myMusic.stop("play");
 		myMusic.play("clear");
   }
   keyAction(code){
